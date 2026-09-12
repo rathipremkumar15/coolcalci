@@ -1,5 +1,9 @@
 # CoolCalci
 
+### 🚀 [Try CoolCalci Live]((https://coolcalci.vercel.app/))
+
+Smart calculation assistant for everyday mathematics and trading calculations.# CoolCalci
+
 A professional local-first calculation assistant for everyday math and trading calculations.
 
 ## Features
