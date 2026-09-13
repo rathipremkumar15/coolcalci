@@ -5,6 +5,8 @@
   const openers=document.querySelectorAll('[data-open-pricing]');
   const close=document.getElementById('closePricing');
   const billingButtons=document.querySelectorAll('[data-billing]');
+  const priceAmount=document.getElementById('monthlyPrice');
+  const priceSuffix=document.querySelector('#proCta')?.closest('.price-card')?.querySelector('.price small');
   const annualNote=document.getElementById('annualNote');
   const proCta=document.getElementById('proCta');
   const usageCount=document.getElementById('usageCount');
@@ -19,6 +21,8 @@
   let billing=localStorage.getItem(billingKey)||'monthly';
   function renderBilling(){
     billingButtons.forEach(b=>b.classList.toggle('active',b.dataset.billing===billing));
+    if(priceAmount) priceAmount.textContent=billing==='annual'?'$50':'$5';
+    if(priceSuffix) priceSuffix.textContent=billing==='annual'?'/ year':'/ month';
     if(annualNote) annualNote.textContent=billing==='annual'?'Save $10 vs monthly billing':'Best value · $50/year';
     if(proCta){proCta.dataset.checkout=billing;proCta.textContent=billing==='annual'?'Choose Pro yearly':'Choose Pro monthly'}
   }
