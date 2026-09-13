@@ -1,41 +1,30 @@
-/* CoolCalci Phase 1 monetization UX. Payment/auth/entitlements are intentionally not active yet. */
+/* CoolCalci Phase 1 UX logic: real local calculator previews, examples, history and saved calculations. */
 (function(){
-  const billingKey='coolcalci_billing_preview_v1';
-  const overlay=document.getElementById('pricingOverlay');
-  const openers=document.querySelectorAll('[data-open-pricing]');
-  const close=document.getElementById('closePricing');
-  const billingButtons=document.querySelectorAll('[data-billing]');
-  const priceAmount=document.getElementById('monthlyPrice');
-  const priceSuffix=document.querySelector('#proCta')?.closest('.price-card')?.querySelector('.price small');
-  const annualNote=document.getElementById('annualNote');
-  const proCta=document.getElementById('proCta');
-  const usageCount=document.getElementById('usageCount');
-  const usageBar=document.getElementById('usageBar');
-  if(!overlay) return;
-  const open=()=>{overlay.classList.add('open');document.body.style.overflow='hidden'};
-  const shut=()=>{overlay.classList.remove('open');document.body.style.overflow=''};
-  openers.forEach(b=>b.addEventListener('click',open));
-  close?.addEventListener('click',shut);
-  overlay.addEventListener('click',e=>{if(e.target===overlay)shut()});
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')shut()});
-  let billing=localStorage.getItem(billingKey)||'monthly';
-  function renderBilling(){
-    billingButtons.forEach(b=>b.classList.toggle('active',b.dataset.billing===billing));
-    if(priceAmount) priceAmount.textContent=billing==='annual'?'$50':'$5';
-    if(priceSuffix) priceSuffix.textContent=billing==='annual'?'/ year':'/ month';
-    if(annualNote) annualNote.textContent=billing==='annual'?'Save $10 vs monthly billing':'Best value · $50/year';
-    if(proCta){proCta.dataset.checkout=billing;proCta.textContent=billing==='annual'?'Choose Pro yearly':'Choose Pro monthly'}
-  }
-  billingButtons.forEach(b=>b.addEventListener('click',()=>{billing=b.dataset.billing;localStorage.setItem(billingKey,billing);renderBilling()}));
-  renderBilling();
-  document.querySelectorAll('[data-checkout]').forEach(b=>b.addEventListener('click',()=>{
-    const t=document.getElementById('toast');if(!t)return;
-    t.textContent=(b.dataset.checkout==='annual'?'Annual Pro selected':'Monthly Pro selected')+' · Payments activate in Phase 3';
-    t.classList.add('show');clearTimeout(window.__ccToast);window.__ccToast=setTimeout(()=>t.classList.remove('show'),2200);
-  }));
-  const usage=Number(localStorage.getItem('coolcalci_usage_preview_v1')||'0');
-  const cap=3;
-  if(usageCount) usageCount.textContent=Math.min(usage,cap)+' / '+cap+' free today';
-  if(usageBar) usageBar.style.width=Math.min(100,(usage/cap)*100)+'%';
-  window.CoolCalciPhase1={openPricing:open,closePricing:shut,billing:()=>billing,phase:'1'};
+  const KEY='coolcalci_v4';
+  const state=JSON.parse(localStorage.getItem(KEY)||'null')||{usage:0,day:new Date().toISOString().slice(0,10),history:[],saved:[],plan:'free'};
+  if(state.day!==new Date().toISOString().slice(0,10)){state.usage=0;state.day=new Date().toISOString().slice(0,10)}
+  const $=id=>document.getElementById(id); const input=$('calcInput'); const chat=$('chat');
+  const prompts=[
+    ['Everyday math','Percentages, totals, changes and growth.','What is 18% of 2500?'],
+    ['Risk management','Account risk and position planning.','I have a $5000 account and want to risk 1%. How much is my maximum risk?'],
+    ['Trading R:R','Entry, SL, TP and reward-to-risk.','Calculate risk to reward if entry is 3650, stop loss 3645 and target 3665.'],
+    ['XAUUSD lot size','Gold position sizing from account risk.','Calculate XAUUSD lot size for a $5000 account, 1% risk, entry 3650 and stop loss 3645.'],
+    ['Percentage change','Measure gains, losses and price moves.','What is the percentage change from 3500 to 3675?'],
+    ['SL / TP planning','Build targets from entry, risk and R:R.','Calculate take profit for XAUUSD entry 3650 with 5 points risk and 1:3 R:R.']
+  ];
+  function persist(){localStorage.setItem(KEY,JSON.stringify(state))}
+  function historyMs(){return state.plan==='pro-yearly'?365*864e5:state.plan==='pro-monthly'?30*864e5:864e5}
+  function clean(){state.history=state.history.filter(x=>Date.now()-x.time<historyMs());state.saved=state.saved.filter(x=>Date.now()-x.time<365*864e5)}
+  function render(){clean();persist();const free=state.plan==='free';$('usageCount').textContent=free?Math.min(state.usage,3)+' / 3 free today':'Unlimited';$('usageBar').style.width=free?Math.min(100,state.usage/3*100)+'%':'100%';$('planPill').textContent=free?'Free plan':state.plan==='pro-monthly'?'Pro · Monthly':'Pro · Yearly';$('usageLabel').textContent=free?'Free usage':'Pro usage';$('hint').textContent=free?'Free plan includes 3 calculation previews per day · History stays for 24 hours.':'Pro includes unlimited calculations · History stays for '+(state.plan==='pro-monthly'?'1 month.':'1 year.');const h=$('history');h.innerHTML=state.history.length?state.history.map((x,i)=>`<button data-history="${i}"><span>${escapeHtml(x.title)}</span><small>${new Date(x.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</small></button>`).join(''):'<div class="empty-history">Recent calculations stay visible for '+(free?'24 hours.':state.plan==='pro-monthly'?'1 month.':'1 year.')+'</div>'}
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+  function parse(q){const s=q.toLowerCase().replace(/,/g,'');let m=s.match(/([0-9.]+)\s*%\s*(?:of|on)\s*\$?([0-9.]+)/);if(m)return {r:(+m[1]/100*+m[2]).toLocaleString(undefined,{maximumFractionDigits:8}),f:`${m[1]}% × ${m[2]}`};m=s.match(/percentage change from\s*([0-9.]+)\s*to\s*([0-9.]+)/);if(m){let a=+m[1],b=+m[2];return {r:((b-a)/a*100).toFixed(4)+'%',f:`(${b} − ${a}) ÷ ${a} × 100`}}m=s.match(/entry\s*(?:is|=)?\s*([0-9.]+).*?(?:stop loss|sl)\s*(?:is|=)?\s*([0-9.]+).*?(?:target|tp)\s*(?:is|=)?\s*([0-9.]+)/);if(m){let e=+m[1],sl=+m[2],tp=+m[3],risk=Math.abs(e-sl),reward=Math.abs(tp-e);return {r:`Risk ${risk.toFixed(2)} · Reward ${reward.toFixed(2)} · R:R 1:${(reward/risk).toFixed(2)}`,f:`Risk = |${e} − ${sl}| · Reward = |${tp} − ${e}|`}}m=s.match(/\$?([0-9.]+)\s*(?:account|capital).*?(?:risk|risking).*?([0-9.]+)\s*%/);if(m)return {r:`$${(+m[1]*+m[2]/100).toFixed(2)} maximum risk`,f:`${m[1]} × ${m[2]}%`};m=s.match(/xauusd.*?(?:lot size).*?\$?([0-9.]+).*?(?:account).*?([0-9.]+)\s*%.*?(?:entry).*?([0-9.]+).*?(?:stop loss|sl).*?([0-9.]+)/);if(m){let acct=+m[1],pct=+m[2],entry=+m[3],sl=+m[4],risk=acct*pct/100,dist=Math.abs(entry-sl);return {r:`≈ ${((risk/(dist*100))/1).toFixed(2)} lots`,f:`Risk $${risk.toFixed(2)} ÷ ($${dist.toFixed(2)} move × $100/lot)`}}m=s.match(/xauusd.*?(?:take profit|tp).*?entry\s*([0-9.]+).*?(?:([0-9.]+)\s*points).*?(?:1:([0-9.]+))/);if(m){let e=+m[1],points=+m[2],rr=+m[3];return {r:`TP ≈ ${ (e+points*rr).toFixed(2)} for a buy`,f:`${e} + (${points} × ${rr})`}}m=s.match(/(?:risk reward|r:r).*?([0-9.]+).*?([0-9.]+)/);if(m)return {r:`R:R calculation available — use entry, SL and TP for an exact result.`,f:'Enter entry, stop loss and target values.'};if(/^[\d\s()+\-*/.%]+$/.test(s)){try{return {r:String(Function('"use strict";return ('+s+')')()),f:s}}catch(e){}}return null}
+  function toast(t){const x=$('toast');x.textContent=t;x.classList.add('show');clearTimeout(window.__toast);window.__toast=setTimeout(()=>x.classList.remove('show'),2200)}
+  function submit(q){q=q.trim();if(!q)return;if(state.plan==='free'&&state.usage>=3){$('pricingOverlay').classList.add('open');toast("You've reached today's free preview limit.");return}document.querySelector('.welcome')?.remove();const u=document.createElement('div');u.className='msg user';u.innerHTML='<div class="bubble"></div>';u.querySelector('.bubble').textContent=q;chat.appendChild(u);let out=parse(q);if(!out)out={r:'I can handle this calculation in the advanced engine in a later phase. For now, try one of the supported examples.',f:'Preview capability'};const b=document.createElement('div');b.className='msg bot';b.innerHTML='<div class="bubble"><div class="answer-title">CoolCalci result</div><div class="result"></div><div class="formula"></div><div class="actions"><button data-copy>Copy result</button><button data-save>Save</button></div></div>';b.querySelector('.result').textContent=out.r;b.querySelector('.formula').textContent=out.f;chat.appendChild(b);if(state.plan==='free')state.usage++;state.history.unshift({q,title:titleFor(q),r:out.r,time:Date.now()});persist();render();chat.scrollTop=chat.scrollHeight}
+  function titleFor(q){return q.length>44?q.slice(0,44)+'…':q}
+  function openInfo(kind){const c=$('infoContent');if(kind==='help')c.innerHTML='<h2>How CoolCalci works</h2><p>Describe a calculation in normal language. CoolCalci interprets it, returns a result and shows the calculation logic.</p><div class="help-grid"><div><b>1. Ask</b><span>Type a calculation or tap a suggestion.</span></div><div><b>2. Calculate</b><span>Review the result and formula.</span></div><div><b>3. Verify</b><span>For trading, confirm broker contract specifications.</span></div><div><b>4. Keep it</b><span>Recent history stays available according to your plan.</span></div></div><h3>What can CoolCalci handle?</h3><p>Everyday mathematics, percentages, finance, account risk, XAUUSD/Forex position sizing, SL/TP, R:R and future AI-powered tools.</p>';else if(kind==='saved')c.innerHTML='<h2>Saved calculations</h2><p>Keep useful results for quick reference.</p><div class="example-list">'+(state.saved.length?state.saved.map((x,i)=>`<button class="example-row" data-saved="${i}"><b>${escapeHtml(x.title)}</b><span>${escapeHtml(x.r)}</span></button>`).join(''):'<p>No saved calculations yet. Use Save on a result to keep it here.</p>')+'</div>';else c.innerHTML='<h2>CoolCalci Examples</h2><p>Tap any example to put it into the calculator input.</p><div class="example-list">'+prompts.map(p=>`<button class="example-row" data-prompt="${escapeHtml(p[2])}"><b>${escapeHtml(p[0])}</b><span>${escapeHtml(p[1])}</span></button>`).join('')+'</div>'; $('infoOverlay').classList.add('open')}
+  $('calcForm').addEventListener('submit',e=>{e.preventDefault();submit(input.value);input.value=''});document.addEventListener('click',e=>{const p=e.target.closest('[data-prompt]');if(p){$('infoOverlay').classList.remove('open');input.value=p.dataset.prompt;input.focus();return}const h=e.target.closest('[data-history]');if(h){input.value=state.history[+h.dataset.history]?.q||'';input.focus()}const sv=e.target.closest('[data-saved]');if(sv){input.value=state.saved[+sv.dataset.saved]?.q||'';$('infoOverlay').classList.remove('open');input.focus()}if(e.target.closest('[data-copy]')){navigator.clipboard?.writeText(e.target.closest('.bubble').querySelector('.result').textContent);toast('Result copied')}if(e.target.closest('[data-save]')){const b=e.target.closest('.bubble'),r=b.querySelector('.result').textContent;const f=b.querySelector('.formula').textContent;const q=[...chat.querySelectorAll('.msg.user')].at(-1)?.querySelector('.bubble')?.textContent||'Calculation';state.saved.unshift({q,title:titleFor(q),r:r+' · '+f,time:Date.now()});persist();toast('Calculation saved')}if(e.target.closest('[data-close-info]'))$('infoOverlay').classList.remove('open');if(e.target.closest('[data-open-pricing]'))$('pricingOverlay').classList.add('open')});
+  $('helpBtn').onclick=()=>openInfo('help');$('mobileHelp').onclick=()=>openInfo('help');$('examplesBtn').onclick=()=>openInfo('examples');$('showAllExamples').onclick=()=>openInfo('examples');$('savedBtn').onclick=()=>openInfo('saved');$('clearHistory').onclick=()=>{state.history=[];persist();render();toast('Recent history cleared')};$('mobileClear').onclick=()=>$('clearHistory').click();$('calculatorBtn').onclick=()=>input.focus();
+  $('newChat').onclick=()=>{location.reload()};
+  document.querySelectorAll('[data-billing]').forEach(b=>b.addEventListener('click',()=>{state.plan=b.dataset.billing==='annual'?'pro-yearly':'pro-monthly';persist();render();toast('Pro preview enabled for this browser') }));
+  render();
 })();
