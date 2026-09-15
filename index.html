@@ -8,6 +8,7 @@
 <title>CoolCalci — Calculation Assistant</title>
 <link rel="icon" href="coolcalci-logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="phase1.css">
+<link rel="stylesheet" href="phase2.css">
 </head>
 <body>
 <div class="app">
@@ -32,6 +33,7 @@
     <div class="top-actions">
       <div class="usage-wrap"><div class="usage-top"><span id="usageLabel">Free usage</span><span id="usageCount">0 / 3 free today</span></div><div class="usage-bar"><span id="usageBar"></span></div></div>
       <span class="plan-pill" id="planPill">Free plan</span>
+      <div id="authArea"><button class="auth-button" id="authBtn">Sign in</button></div>
       <button class="iconbtn mobile-help" id="mobileHelp" aria-label="Help">?</button>
       <button class="iconbtn mobile-clear" id="mobileClear">Clear</button>
       <button class="iconbtn mobile-upgrade" data-open-pricing>Upgrade</button>
@@ -55,11 +57,30 @@
   <div class="billing"><div class="billing-toggle"><button class="active" data-billing="monthly">Monthly</button><button data-billing="annual">Yearly <span class="save-badge">Save $10</span></button></div></div>
   <div class="plans">
     <article class="price-card"><h3>Free</h3><div class="price-desc">Try the core experience.</div><div class="price">$0 <small>/ month</small></div><div class="annual-note">3 calculation previews / day</div><ul class="features"><li>Basic mathematics</li><li>Percentage calculations</li><li>Basic trading calculations</li><li>24-hour calculation history</li><li>Help & examples</li></ul><button class="price-cta secondary-cta" disabled>Current plan</button><div class="plan-foot">No card required</div></article>
-    <article class="price-card featured"><span class="popular">Best value</span><h3>Pro</h3><div class="price-desc">Unlimited calculation power.</div><div class="price"><span id="monthlyPrice">$5</span> <small id="priceSuffix">/ month</small></div><div class="annual-note" id="annualNote">Best value · $50/year</div><ul class="features"><li>Unlimited calculations</li><li>Advanced XAUUSD & Forex tools</li><li>Lot size, SL/TP & R:R</li><li>AI calculation assistant</li><li>1 month history on monthly plan</li><li>1 year history on yearly plan</li><li>Advanced explanations & exports</li></ul><button class="price-cta primary-cta" id="proCta">Choose Pro monthly</button><div class="trial-line">Launch offer: <strong>2-day free trial</strong> — secure activation will be connected later.</div><div class="plan-foot">No payment is collected in Phase 1</div></article>
+    <article class="price-card featured"><span class="popular">Best value</span><h3>Pro</h3><div class="price-desc">Unlimited calculation power.</div><div class="price"><span id="monthlyPrice">$5</span> <small id="priceSuffix">/ month</small></div><div class="annual-note" id="annualNote">Best value · $50/year</div><ul class="features"><li>Unlimited calculations</li><li>Advanced XAUUSD & Forex tools</li><li>Lot size, SL/TP & R:R</li><li>AI calculation assistant</li><li>1 month history on monthly plan</li><li>1 year history on yearly plan</li><li>Advanced explanations & exports</li></ul><button class="price-cta primary-cta" id="proCta">Choose Pro monthly</button><div class="trial-line">Launch offer: <strong>2-day free trial</strong> — secure activation will be connected later.</div><div class="plan-foot">No payment is collected in Phase 2</div></article>
   </div>
   <div class="addons"><h3>Premium add-ons</h3><p>Optional high-value services can be purchased separately in a later phase.</p><div class="addon-grid"><div class="addon"><b>AI Calculation Pack</b><span>Extra advanced AI usage</span></div><div class="addon"><b>Trading Analysis Pack</b><span>Advanced trading analysis credits</span></div><div class="addon"><b>Premium Reports</b><span>Detailed downloadable reports</span></div></div></div>
-  <div class="phase-note"><strong>Phase 1:</strong> this is a product preview. Real authentication, secure entitlements and payments are intentionally not active yet.</div>
+  <div class="phase-note"><strong>Phase 2:</strong> account authentication and secure cloud data are being connected. Payments remain disabled until the monetization phase.</div>
 </div></div>
+<div class="modal-overlay" id="authOverlay" aria-hidden="true"><div class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <button class="auth-close" id="authClose" aria-label="Close">×</button>
+  <h2 id="authTitle">Sign in to CoolCalci</h2>
+  <p id="authSubtitle">Sync your history and saved calculations across devices.</p>
+  <div class="auth-tabs"><button id="signInTab" class="active" type="button">Sign in</button><button id="signUpTab" type="button">Create account</button></div>
+  <form class="auth-form" id="authForm">
+    <label id="nameLabel" hidden>Name<input id="authName" autocomplete="name"></label>
+    <label>Email<input id="authEmail" type="email" autocomplete="email" required></label>
+    <label>Password<input id="authPassword" type="password" autocomplete="current-password" minlength="6" required></label>
+    <button class="auth-primary" id="authSubmit" type="submit">Sign in</button>
+    <div class="auth-divider"><span>or</span></div>
+    <button class="auth-google" id="googleBtn" type="button">Continue with Google</button>
+    <div class="auth-status" id="authStatus" aria-live="polite"></div>
+  </form>
+  <p class="auth-note">Your calculations belong to your account. CoolCalci uses row-level security so users can access only their own cloud data.</p>
+</div></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="supabase-config.js" defer></script>
 <script src="phase1.js" defer></script>
+<script src="phase2.js" defer></script>
 </body>
 </html>
