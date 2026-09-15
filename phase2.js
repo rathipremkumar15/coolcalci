@@ -29,11 +29,14 @@
     if (plan === 'pro_yearly' || plan === 'pro-yearly') return 'pro-yearly';
     return 'free';
   }
-  function retentionMs(plan) {
-    if (plan === 'pro-yearly') return 365 * DAY;
-    if (plan === 'pro-monthly') return 31 * DAY;
-    return DAY;
+  function retentionDate(plan, fromMs=Date.now()) {
+    const d = new Date(fromMs);
+    if (normalizePlan(plan) === 'pro-yearly') d.setFullYear(d.getFullYear() - 1);
+    else if (normalizePlan(plan) === 'pro-monthly') d.setMonth(d.getMonth() - 1);
+    else d.setTime(d.getTime() - DAY);
+    return d;
   }
+  function retentionMs(plan) { return Date.now() - retentionDate(plan).getTime(); }
   function openAuth() { const o=$('authOverlay'); if(!o)return; o.classList.add('open'); o.setAttribute('aria-hidden','false'); $('authEmail')?.focus(); }
   function closeAuth() { const o=$('authOverlay'); if(!o)return; o.classList.remove('open'); o.setAttribute('aria-hidden','true'); }
   function status(message,error) { const el=$('authStatus'); if(!el)return; el.textContent=message||''; el.classList.toggle('error',!!error); }
@@ -65,12 +68,12 @@
     const s=localState(); s.plan=normalizePlan(ent?.plan); s.role=ent?.role||'user'; s.unlimitedCalculations=!!ent?.unlimitedCalculations; writeLocalState(s);
   }
   function pruneLocalHistory(plan) {
-    const s=localState(); const cutoff=Date.now()-retentionMs(normalizePlan(plan));
+    const s=localState(); const cutoff=retentionDate(normalizePlan(plan)).getTime();
     s.history=(s.history||[]).filter(x=>Number(x.time||0)>=cutoff); writeLocalState(s);
   }
   async function loadCloudData(user,ent) {
     if(!client||!user)return;
-    const cutoff=new Date(Date.now()-retentionMs(ent?.plan)).toISOString();
+    const cutoff=retentionDate(ent?.plan).toISOString();
     const [historyRes,savedRes]=await Promise.all([
       client.from('calculation_history').select('id,query,title,result,formula,created_at').eq('user_id',user.id).gte('created_at',cutoff).order('created_at',{ascending:false}).limit(200),
       client.from('saved_calculations').select('id,query,title,result,formula,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(200)
@@ -99,8 +102,8 @@
     if(!client||!user)return; const s=localState(); const x=s.saved?.[0]; if(!x)return;
     const marker=`${x.time}:${x.q}:${x.r}`; if(sessionStorage.getItem('cc_last_synced_saved')===marker)return;
     const raw=String(x.r||'');const parts=raw.split(' · ');
-    const {error}=await client.from('saved_calculations').insert({user_id:user.id,query:x.q||x.title||'Calculation',title:x.title||'Calculation',result:parts.shift()||raw,formula:parts.join(' · ')||null,created_at:new Date(x.time||Date.now()).toISOString()});
-    if(!error)sessionStorage.setItem('cc_last_synced_saved',marker);
+    const {data,error}=await client.from('saved_calculations').insert({user_id:user.id,query:x.q||x.title||'Calculation',title:x.title||'Calculation',result:parts.shift()||raw,formula:parts.join(' · ')||null,created_at:new Date(x.time||Date.now()).toISOString()}).select('id').single();
+    if(!error){x.cloudId=data?.id||x.cloudId; s.saved[0]=x; writeLocalState(s); sessionStorage.setItem('cc_last_synced_saved',marker);}
   }
   async function deleteCloudSavedByLocalIndex(index) {
     if(!client)return false; const s=localState(); const x=s.saved?.[index]; if(!x?.cloudId)return false;
