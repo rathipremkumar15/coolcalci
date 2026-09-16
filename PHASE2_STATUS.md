@@ -5,8 +5,8 @@
 - [x] Phase 2 database foundation applied to production
 - [x] Publishable browser configuration present; no service-role secret committed
 - [x] Phase 2 application bridge present
-- [ ] Google OAuth provider credentials/configuration verified in Supabase Auth
-- [ ] Production auth redirect URL verified
+- [x] Google OAuth provider credentials/configuration verified in Supabase Auth
+- [x] Production auth redirect URL verified through successful Google sign-in
 
 ## Backend
 - [x] Profiles and subscription tables
@@ -30,10 +30,12 @@
 - [ ] Owner entitlement verification
 - [ ] Mobile/auth UX verification
 
-## Phase 2 final test — not started yet
-The full phase test will be performed only after implementation is complete:
+## Phase 2 final test — remaining
+The implementation is complete enough for the final integrated test. The remaining checks are behavioral verification only:
 
 Signup -> Login -> Google -> Calculate -> quota -> History -> Save -> Reopen -> Logout -> Login again -> data restored -> entitlement -> user-isolation/security
+
+Google OAuth has been verified in production: a Google-authenticated user record is present in Supabase Auth.
 
 ## Phase 3 intentionally not activated
 - Payment collection
